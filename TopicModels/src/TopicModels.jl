@@ -18,6 +18,6 @@ export Sampler_sample
 
 include("LDA.jl")
 export LDA
-export lda_posterior, lda_addSample, lda_removeSample, lda_wordPredict, lda_topicPredict, lda_sample, lda_topicN
+export lda_posterior, lda_addSample, lda_removeSample, lda_wordPredict, lda_topicPredict, lda_sample, lda_topicN, lda_removeWord, lda_gibbsSampling, lda_removeWord
 
 end # module
