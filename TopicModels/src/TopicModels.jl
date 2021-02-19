@@ -1,5 +1,7 @@
 module TopicModels
 
+using CSV, DataFrames
+
 include("DocumentSet.jl")
 export DocumentSet
 export documentset_readData, documentset_addDocument, documentset_transform, documentset_sampleDocuments
@@ -18,6 +20,9 @@ export Sampler_sample
 
 include("LDA.jl")
 export LDA
-export lda_posterior, lda_addSample, lda_removeSample, lda_wordPredict, lda_topicPredict, lda_sample, lda_topicN, lda_removeWord, lda_gibbsSampling, lda_removeWord
+export lda_posterior, lda_addSample, lda_removeSample, lda_wordPredict, lda_topicPredict, lda_sample, lda_topicN, lda_gibbsSampling, lda_removeWord, lda_addWord
+
+include("APIs.jl")
+export preprocess, train, show_topics, apply_refinement
 
 end # module

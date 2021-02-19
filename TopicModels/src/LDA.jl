@@ -131,11 +131,11 @@ function lda_removeWord(word::Int, topic::Int, corpus::DocumentSet, lda_obj::LDA
     lda_obj.wordPolya[topic].dir = Dirichlet(param) #Reconstruct the same lda variable
 end
 
-function lda_add_word(word::String, topic::Int, corpus::DocumentSet, lda_obj::LDA)
+function lda_addWord(word::String, topic::Int, corpus::DocumentSet, lda_obj::LDA)
     word = corpus.vocabulary[word]
-    lda_add_word(word, topic, corpus, lda_obj)
+    lda_addWord(word, topic, corpus, lda_obj)
 end
-function lda_add_word(word::Int, topic::Int, corpus::DocumentSet, lda_obj::LDA)
+function lda_addWord(word::Int, topic::Int, corpus::DocumentSet, lda_obj::LDA)
     for doc in enumerate(corpus.documents)
         for w in enumerate(doc[2])
             if w[2]==word
