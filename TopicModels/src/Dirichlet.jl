@@ -6,7 +6,7 @@ mutable struct Dirichlet
     sumAlpha::Float64
 end
 
-Dirichlet(param::Array) = Dirichlet(size(param)[1], param, sum(param))
+Dirichlet(param::Array) = Dirichlet(length(param), param, Base.sum(param))
 Dirichlet(K::Int, a::Float64) = Dirichlet(K, [a for i in 1:K], K*a)
 
 function dirichlet_optimizeParam(Ck, ndkMax, C_, ndMax, numIteration, dirichlet_obj::Dirichlet)

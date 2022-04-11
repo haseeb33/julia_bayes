@@ -29,3 +29,9 @@ Manifest.toml
 .ipynb_checkpoints/LDA_with_package-checkpoint.ipynb
 .ipynb_checkpoints/stopwords-checkpoint.txt
 *.csv
+*.bz2
+*.json
+*.gz
+phrase-bert-model.zip
+phrase-bert-model/0_BERT/vocab.txt
+phrase-bert-model/

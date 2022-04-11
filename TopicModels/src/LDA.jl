@@ -1,3 +1,4 @@
+using JSON
 mutable struct LDA
     numIteration::Int64
     M::Int64
@@ -9,30 +10,31 @@ mutable struct LDA
 end
 
 LDA(topicPrior::Dirichlet, wordPrior::Dirichlet) = LDA(100, topicPrior.K, topicPrior, [Polya(wordPrior) for i in 1:topicPrior.K], [[]], [], [[]])
+LDA(numIteration::Int64, M::Int64, topicDirAlpha::Array, wordPolya::Array{Polya}, X::Array{Any,1}, topicPolya::Array{Polya}, Samples::Array{Any}) = LDA(numIteration, M, Dirichlet(topicDirAlpha), wordPolya, X, topicPolya, Samples)
 
-function lda_sample(docs, lda_obj::LDA)
-    lda_obj.X = docs
+function sample(self::LDA, docs)
+    self.X = docs
     D = size(docs)[1]
     
     samples = [[] for i=1:D]
     for d in 1:D
         Nd = size(docs[d])[1]
         samples[d] = [0 for i in 1:Nd]
-        push!(lda_obj.topicPolya, Polya(lda_obj.topicDir))
+        push!(self.topicPolya, Polya(self.topicDir))
         
         temp = []
         for i in 1:Nd
-            randomSample = rand(1:lda_obj.M)
+            randomSample = rand(1:self.M)
             push!(temp, randomSample)
-            lda_addSample(d, i, randomSample, lda_obj)
+            addSample(self, d, i, randomSample)
         end
         samples[d] = temp
     end
-    lda_obj.Samples = samples
-    lda_gibbsSampling(docs, lda_obj.numIteration, lda_obj)
+    self.Samples = samples
+    gibbsSampling(self, docs, self.numIteration)
 end
 
-function lda_gibbsSampling(docs, numIteration, lda_obj::LDA)
+function gibbsSampling(self::LDA, docs, numIteration)
     D = size(docs)[1]
     ndMax = Int(floor(maximum([size(doc)[1] for doc in docs])))
     
@@ -40,65 +42,65 @@ function lda_gibbsSampling(docs, numIteration, lda_obj::LDA)
     for d in 1:D
         C_[(size(docs[d])[1])+1]+=1 
     end
-    samples = lda_obj.Samples
+    samples = self.Samples
     
     for iteration in 1:numIteration
         for d in 1:D
             Nd = size(docs[d])[1]
             for i in 1:Nd
-                if samples[d][i] != 0 lda_removeSample(d, i, samples[d][i], lda_obj) end
-                samples[d][i] = Sampler_sample(lda_posterior(d, i, lda_obj))
-                lda_addSample(d, i, samples[d][i], lda_obj)
+                if samples[d][i] != 0 removeSample(self, d, i, samples[d][i]) end
+                samples[d][i] = Sampler_sample(posterior(self, d, i))
+                addSample(self, d, i, samples[d][i])
             end
         end
      
-        ndkMax = [0 for i in 1:lda_obj.M]
-        Ck = [[0 for j in 1:ndMax+1] for i in 1:lda_obj.M]
-        for m in 1:lda_obj.M
+        ndkMax = [0 for i in 1:self.M]
+        Ck = [[0 for j in 1:ndMax+1] for i in 1:self.M]
+        for m in 1:self.M
             for d in 1:D
-                ndk = lda_obj.topicPolya[d].n[m]
+                ndk = self.topicPolya[d].n[m]
                 Ck[m][ndk+1]+=1  
                 ndkMax[m] = max(ndkMax[m], ndk)
             end
         end
-        dirichlet_optimizeParam(Ck, ndkMax, C_, ndMax+1, 20, lda_obj.topicDir)
+        dirichlet_optimizeParam(Ck, ndkMax, C_, ndMax+1, 20, self.topicDir)
     end  
-    lda_obj.Samples = samples
+    self.Samples = samples
 end
 
-function lda_posterior(d::Int, i::Int, lda_obj::LDA)
-    v = lda_obj.X[d][i]
-    posterior = [0.0 for i in 1:lda_obj.M]
-    for m in 1:lda_obj.M
-        posterior[m] = polya_p(m, lda_obj.topicPolya[d]) * polya_p(v, lda_obj.wordPolya[m])
+function posterior(self::LDA, doc::Int, word::Int)
+    v = self.X[doc][word]
+    posterior = [0.0 for m in 1:self.M]
+    for m in 1:self.M
+        posterior[m] = polya_p(m, self.topicPolya[doc]) * polya_p(v, self.wordPolya[m])
     end
     return posterior
 end
 
-function lda_addSample(d::Int, i::Int, m::Int, lda_obj::LDA)
-    v = lda_obj.X[d][i]
-    polya_observe(m, lda_obj.topicPolya[d])
-    polya_observe(v, lda_obj.wordPolya[m])
+function addSample(self::LDA, doc::Int, word::Int, m::Int)
+    v = self.X[doc][word]
+    polya_observe(m, self.topicPolya[doc])
+    polya_observe(v, self.wordPolya[m])
 end
 
-function lda_removeSample(d::Int, i::Int, m::Int, lda_obj::LDA)
-    v = lda_obj.X[d][i]
-    polya_forget(m, lda_obj.topicPolya[d])
-    polya_forget(v, lda_obj.wordPolya[m])
+function removeSample(self::LDA, doc::Int, word::Int, m::Int)
+    v = self.X[doc][word]
+    polya_forget(m, self.topicPolya[doc])
+    polya_forget(v, self.wordPolya[m])
 end
 
-function lda_wordPredict(m::Int, v::Int, lda_obj::LDA)
-    return polya_p(v, lda_obj.wordPolya[m])
+function wordPredict(self::LDA, m::Int, v::Int)
+    return polya_p(v, self.wordPolya[m])
 end
 
-function lda_topicPredict(d::Int, m::Int, lda_obj::LDA)
-    return polya_p(m, lda_obj.topicPolya[d])
+function topicPredict(self::LDA, d::Int, m::Int)
+    return polya_p(m, self.topicPolya[d])
 end
 
-function lda_topicN(topic_n::Int, top_n_words::Int, corpus::DocumentSet, lda::LDA)
+function topicN(self::LDA, corpus::DocumentSet, topic_n::Int, top_n_words::Int)
     topic_proportion = [];
     for v in 1:size(corpus.reverse_vocabulary)[1]
-        prop = TopicModels.lda_wordPredict(topic_n, v, lda)
+        prop = wordPredict(self, topic_n, v)
         push!(topic_proportion, prop)
     end
     topic_words_idx = sortperm(topic_proportion, rev=true)[1:top_n_words]
@@ -111,43 +113,106 @@ function lda_topicN(topic_n::Int, top_n_words::Int, corpus::DocumentSet, lda::LD
     return top_words, [round(i, digits=5) for i in topic_proportion]
 end
 
-function lda_removeWord(word::String, topic::Int, corpus::DocumentSet, lda_obj::LDA)
-    word = corpus.vocabulary[word]
-    lda_removeWord(word, topic, corpus, lda_obj)
-end
-function lda_removeWord(word::Int, topic::Int, corpus::DocumentSet, lda_obj::LDA)
-    for doc in enumerate(corpus.documents)
-        for w in enumerate(doc[2])
-            if w[2]==word
-                if lda_obj.Samples[doc[1]][w[1]] == topic
-                    lda_removeSample(doc[1], w[1], lda_obj.Samples[doc[1]][w[1]], lda_obj)
-                    lda_obj.Samples[doc[1]][w[1]] = 0
-                end
-            end
+
+function sortedTopDocsForTopics(self::LDA, corpus::DocumentSet)
+    topic_distribution = []
+    for i in 1:self.M
+        topic_dist = []
+        for j in 1:corpus.document_size
+            push!(topic_dist, topicPredict(self, j, i))
         end
+        push!(topic_distribution, topic_dist)
     end
-    param = copy(lda_obj.wordPolya[topic].dir.alpha)
-    param[word] = 10E-8 # Assign very small prior epsilone 
-    lda_obj.wordPolya[topic].dir = Dirichlet(param) #Reconstruct the same lda variable
+    sorted_topic_distribution = []
+    for i in topic_distribution
+        push!(sorted_topic_distribution, sortperm(i, rev=true)[1:trunc(Int, (corpus.document_size/self.M))])
+    end        
+    return sorted_topic_distribution 
 end
 
-function lda_addWord(word::String, topic::Int, corpus::DocumentSet, lda_obj::LDA)
-    word = corpus.vocabulary[word]
-    lda_addWord(word, topic, corpus, lda_obj)
+function saveLDA(self::LDA, file)
+    lda_dict = Dict()
+    lda_dict["numIteration"] = self.numIteration
+    lda_dict["M"] = self.M
+    lda_dict["topicDir_param"] = self.topicDir.alpha
+    lda_dict["wordPolya_n"] = [i.n for i in self.wordPolya]
+    lda_dict["X"] = self.X
+    lda_dict["topicPolya_n"] = [i.n for i in self.topicPolya]
+    lda_dict["Samples"] = self.Samples
+    lda_json_string = JSON.json(lda_dict)
+
+    open(file,"w") do f 
+        write(f, lda_json_string) 
+    end  
 end
-function lda_addWord(word::Int, topic::Int, corpus::DocumentSet, lda_obj::LDA)
+
+function loadLDA(file)
+    lda1_raw = JSON.parsefile(file);
+    numIteration = lda1_raw["numIteration"]
+    M = lda1_raw["M"]
+    topicDir_alpha = lda1_raw["topicDir_param"]
+    wordPolya = [Polya(Dirichlet(length(i), 0.01), i) for i in lda1_raw["wordPolya_n"]]
+    X = lda1_raw["X"]
+    topicPolya = [Polya(Dirichlet(topicDir_alpha), i) for i in lda1_raw["topicPolya_n"]]
+    Samples = lda1_raw["Samples"]
+    lda = LDA(numIteration, M, topicDir_alpha, wordPolya, X, topicPolya, Samples)
+    return lda
+end
+
+#--------------------------------Refinements-------------------------------------
+
+function removeWord(self::LDA, corpus::DocumentSet, word::String, topic::Int)
+    word = corpus.vocabulary[word]
+    removeWord(self, corpus, word, topic)
+end
+function removeWord(self::LDA, corpus::DocumentSet, word::Int, topic::Int)
     for doc in enumerate(corpus.documents)
         for w in enumerate(doc[2])
             if w[2]==word
-                if lda_obj.Samples[doc[1]][w[1]]!=topic
-                    lda_removeSample(doc[1], w[1], lda_obj.Samples[doc[1]][w[1]], lda_obj)
-                    lda_obj.Samples[doc[1]][w[1]] = 0
+                if self.Samples[doc[1]][w[1]] == topic
+                    removeSample(self, doc[1], w[1], self.Samples[doc[1]][w[1]])
+                    self.Samples[doc[1]][w[1]] = 0
                 end
             end
         end
     end
-    param = copy(lda_obj.wordPolya[topic].dir.alpha)
-    difference = maximum(lda_obj.wordPolya[topic].n) - lda_obj.wordPolya[topic].n[word] #important discussion part
-    param[word] = lda_obj.wordPolya[topic].dir.alpha[word] + difference
-    lda_obj.wordPolya[topic].dir = Dirichlet(param)
+    param = copy(self.wordPolya[topic].dir.alpha)
+    param[word] = 10E-8 # Assign very small prior epsilon 
+    self.wordPolya[topic].dir = Dirichlet(param) #Reconstruct the same lda variable
+end
+
+function addWord(self::LDA, corpus::DocumentSet, word::String, topic::Int)
+    word = corpus.vocabulary[word]
+    addWord(self, corpus, word, topic)
+end
+function addWord(self::LDA, corpus::DocumentSet, word::Int, topic::Int)
+    for doc in enumerate(corpus.documents)
+        for w in enumerate(doc[2])
+            if w[2]==word
+                if self.Samples[doc[1]][w[1]]!=topic
+                    removeSample(self, doc[1], w[1], self.Samples[doc[1]][w[1]])
+                    self.Samples[doc[1]][w[1]] = 0
+                end
+            end
+        end
+    end
+    param = copy(self.wordPolya[topic].dir.alpha)
+    difference = maximum(self.wordPolya[topic].n) - self.wordPolya[topic].n[word] #important discussion part
+    param[word] = self.wordPolya[topic].dir.alpha[word] + difference
+    self.wordPolya[topic].dir = Dirichlet(param)
+end
+
+function removeDoc(self::LDA, corpus::DocumentSet, docs, topic::Int)
+    if typeof(docs) == Int64
+        docs = [docs]
+    end
+    for doc_idx in docs
+        for w in enumerate(corpus.documents[doc_idx])
+            removeSample(self, doc_idx, w[1], self.Samples[doc_idx][w[1]])
+            self.Samples[doc_idx][w[1]] = 0
+        end
+        param = copy(self.topicPolya[doc_idx].dir.alpha)
+        param[topic] = 10E-8 # Assign very small prior epsilon 
+        self.topicPolya[doc_idx].dir = Dirichlet(param) #Reconstruct the same lda variable
+    end
 end

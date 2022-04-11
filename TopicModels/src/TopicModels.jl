@@ -1,11 +1,10 @@
 module TopicModels
-
-using CSV, DataFrames
+using CSV, DataFrames, PyCall, JSON
 
 include("DocumentSet.jl")
 export DocumentSet
-export documentset_readData, documentset_addDocument, documentset_transform, documentset_sampleDocuments
-export documentset_OnlinesampleDocuments, documentset_getTermFreq
+export readData, addDocument, transform, sampleDocuments
+export OnlinesampleDocuments, getTermFreq
 
 include("Dirichlet.jl")
 export Dirichlet
@@ -20,9 +19,17 @@ export Sampler_sample
 
 include("LDA.jl")
 export LDA
-export lda_posterior, lda_addSample, lda_removeSample, lda_wordPredict, lda_topicPredict, lda_sample, lda_topicN, lda_gibbsSampling, lda_removeWord, lda_addWord
+export posterior, addSample, removeSample, wordPredict, topicPredict, sample, topicN, gibbsSampling
+export removeWord, addWord,removeDoc, saveLDA, loadLDA
+
+include("TopicLabel.jl")
+export label_generation, each_word_frequency, label_ranking, kl_divergence
 
 include("APIs.jl")
-export preprocess, train, show_topics, apply_refinement
+export preprocess, preprocess_lemma, train, show_topics, apply_refinement, topic_coherence, train_phrase_model
+
+include("Keyphrase.jl")
+export Keyphrase
+export load_keyphrase, top_keyphrases_of_topic, similarity_of_keyphrases, keyphrase_cluster
 
 end # module

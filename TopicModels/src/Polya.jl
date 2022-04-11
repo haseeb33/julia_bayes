@@ -6,6 +6,7 @@ mutable struct Polya
 end
 
 Polya(param::Dirichlet) = Polya(param.K, param, [0 for i in 1:param.K], 0)
+Polya(param::Dirichlet, n::Array) = Polya(param.K, param, n, Base.sum(n))
 
 function polya_p(x::Int, polya_obj::Polya)
     return (polya_obj.n[x]+polya_obj.dir.alpha[x]) / (polya_obj.N+polya_obj.dir.sumAlpha)
