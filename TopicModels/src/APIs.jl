@@ -4,7 +4,7 @@ using CSV, DataFrames
 
 function preprocess(path::String, use="all")
     
-    papers = CSV.read("papers.csv", DataFrame);
+    papers = CSV.read(path, DataFrame);
     docs = papers.paper_text;
     #titles = papers.title; modifiy implementation to store titles in document object
     if typeof(use) == Int64
@@ -81,16 +81,22 @@ function show_topics(lda::LDA, corpus::DocumentSet, top=10, show=true)
     return topics, proportions
 end
 
-function apply_refinement(lda::LDA, corpus::DocumentSet, refi::String, word_or_doc, topic::Int)
+function apply_refinement(lda::LDA, corpus::DocumentSet, refi::String, word_or_doc_or_kp, topic::Int, kp=nothing)
     if refi in ["Add", "add", "a"]
-        TopicModels.addWord(lda, corpus, word_or_doc, topic)
+        TopicModels.addWord(lda, corpus, word_or_doc_or_kp, topic)
         TopicModels.gibbsSampling(lda, corpus.documents, 20);
     elseif refi in ["Remove", "remove", "r"]
-        TopicModels.removeWord(lda, corpus, word_or_doc, topic)
+        TopicModels.removeWord(lda, corpus, word_or_doc_or_kp, topic)
         TopicModels.gibbsSampling(lda, corpus.documents, 20);
     elseif refi in ["Remove_doc", "remove_doc", "remove doc", "Remove doc", "R_D", "r_d"]
-        TopicModels.removeDoc(lda, corpus, word_or_doc, topic)
+        TopicModels.removeDoc(lda, corpus, word_or_doc_or_kp, topic)
         TopicModels.gibbsSampling(lda, corpus.documents, 20);
+    elseif refi in ["Remove_kp", "remove_kp", "R_kp", "r_kp"]
+        #Not complete yet,
+        topic_distributions = TopicModels.sortedTopDocsForTopics(lda, corpus);
+        cluster_kp, docs_have = TopicModels.top_x_kp_of_topic_m(kp, topic_distributions, 5, topic);
+        apply_refinement(lda, corpus, "R_D", docs_have[word_or_doc_or_kp], topic);
+
     else
         Println("It is not a valid refinement")
     end

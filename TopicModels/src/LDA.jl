@@ -130,6 +130,24 @@ function sortedTopDocsForTopics(self::LDA, corpus::DocumentSet)
     return sorted_topic_distribution 
 end
 
+function topic_of_each_doc(self::LDA, corpus::DocumentSet)
+    top_topic_for_each_doc = []
+    for i in 1:corpus.document_size
+        top_val = 0
+        top_topic = 0
+        for j in 1:self.M
+            v = topicPredict(self, i, j)
+            if v>=top_val
+                top_val = v
+                top_topic = j
+            end
+        end
+        push!(top_topic_for_each_doc, top_topic)
+    end
+    return top_topic_for_each_doc
+end
+
+#------------------------save and load LDA----------------------------
 function saveLDA(self::LDA, file)
     lda_dict = Dict()
     lda_dict["numIteration"] = self.numIteration
@@ -200,6 +218,28 @@ function addWord(self::LDA, corpus::DocumentSet, word::Int, topic::Int)
     difference = maximum(self.wordPolya[topic].n) - self.wordPolya[topic].n[word] #important discussion part
     param[word] = self.wordPolya[topic].dir.alpha[word] + difference
     self.wordPolya[topic].dir = Dirichlet(param)
+end
+
+function addDoc(self::LDA, corpus::DocumentSet, docs, topic::Int)
+    if typeof(docs) == Int64
+        docs = [docs]
+    end
+    for doc_idx in docs
+        param = copy(self.topicPolya[doc_idx].dir.alpha)
+        #previous logic put this was failed on small document dataset(20newsgroup)
+        #difference = maximum(self.topicPolya[doc_idx].n) - self.topicPolya[doc_idx].n[topic]
+        #param[topic] = self.topicPolya[doc_idx].dir.alpha[topic] + difference
+        
+        #New logic to improve the effectiveness of this refinement 
+        param[topic] = self.topicPolya[doc_idx].dir.alpha[topic] + maximum(self.topicPolya[doc_idx].n)
+        for w in enumerate(corpus.documents[doc_idx])
+            if self.Samples[doc_idx][w[1]]!=topic
+                removeSample(self, doc_idx, w[1], self.Samples[doc_idx][w[1]])
+                self.Samples[doc_idx][w[1]] = 0
+            end
+        end
+        self.topicPolya[doc_idx].dir = Dirichlet(param)    
+    end          
 end
 
 function removeDoc(self::LDA, corpus::DocumentSet, docs, topic::Int)

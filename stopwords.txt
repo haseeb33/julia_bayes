@@ -60,6 +60,7 @@ did
 doing
 a
 an
+also
 the
 and
 but
@@ -144,6 +145,7 @@ y
 ain
 aren
 aren't
+could
 couldn
 couldn't
 didn

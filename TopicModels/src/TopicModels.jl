@@ -19,8 +19,9 @@ export Sampler_sample
 
 include("LDA.jl")
 export LDA
-export posterior, addSample, removeSample, wordPredict, topicPredict, sample, topicN, gibbsSampling
-export removeWord, addWord,removeDoc, saveLDA, loadLDA
+export sample, gibbsSampling, posterior, addSample, removeSample, wordPredict, topicPredict, topicN 
+export sortedTopDocsForTopics, topic_of_each_doc
+export saveLDA, loadLDA, removeWord, addWord, addDoc, removeDoc
 
 include("TopicLabel.jl")
 export label_generation, each_word_frequency, label_ranking, kl_divergence
@@ -30,6 +31,7 @@ export preprocess, preprocess_lemma, train, show_topics, apply_refinement, topic
 
 include("Keyphrase.jl")
 export Keyphrase
-export load_keyphrase, top_keyphrases_of_topic, similarity_of_keyphrases, keyphrase_cluster
+export load_keyphrase, keyphrases_of_topic, similarity_of_keyphrases, keyphrase_cluster, top_x_kp_of_topic_m
+export top_x_kp_of_topic_m_for_all_docs
 
 end # module
